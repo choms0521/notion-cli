@@ -91,6 +91,13 @@ notion-cli pages update <page-id> --property '{"Status": {"select": {"name": "Do
 # 마크다운으로 내용 교체
 notion-cli pages update-markdown <page-id> "# Hello World"
 
+# 마크다운 부분 수정 (find-and-replace)
+notion-cli pages edit-markdown <page-id> --old "기존 텍스트" --new "새 텍스트"
+notion-cli pages edit-markdown <page-id> --old "반복 텍스트" --new "교체" --replace-all
+
+# 마크다운 일괄 수정 (최대 100건)
+notion-cli pages edit-markdown-batch <page-id> '[{"old_str": "A", "new_str": "B"}, {"old_str": "C", "new_str": "D"}]'
+
 # 이동 / 아카이브
 notion-cli pages move <page-id> --to <new-parent-id>
 notion-cli pages archive <page-id>
@@ -184,6 +191,13 @@ notion-cli --json blocks children <page-id> \
 
 # 페이지 마크다운으로 내용 교체
 notion-cli pages update-markdown <page-id> "$(cat my-document.md)"
+
+# 페이지 마크다운 부분 수정 (전체 교체 없이 특정 텍스트만 변경)
+notion-cli pages edit-markdown <page-id> --old "Draft" --new "Final"
+
+# 여러 곳 한번에 수정
+notion-cli pages edit-markdown-batch <page-id> \
+  '[{"old_str": "v1.0", "new_str": "v1.1"}, {"old_str": "TODO", "new_str": "DONE"}]'
 
 # DB 필터 쿼리
 notion-cli --json databases query <id> \
