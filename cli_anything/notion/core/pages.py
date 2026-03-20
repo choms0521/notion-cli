@@ -124,21 +124,94 @@ def page_retrieve_markdown(
 
 
 def page_update_markdown(
-    client: Client, page_id: str, markdown: str, as_json: bool = False
+    client: Client,
+    page_id: str,
+    markdown: str,
+    allow_deleting_content: bool = False,
+    as_json: bool = False,
 ) -> Dict[str, Any]:
-    """Update page content with markdown."""
+    """Replace entire page content with markdown."""
+    body: Dict[str, Any] = {
+        "type": "replace_content",
+        "replace_content": {"new_str": markdown},
+    }
+    if allow_deleting_content:
+        body["replace_content"]["allow_deleting_content"] = True
+
     result = client.request(
         path=f"pages/{page_id}/markdown",
         method="PATCH",
-        body={
-            "type": "replace_content",
-            "replace_content": {"new_str": markdown},
-        },
+        body=body,
     )
     if as_json:
         print_json(result)
     else:
         print(f"Updated page markdown: {page_id}")
+    return result
+
+
+def page_edit_markdown(
+    client: Client,
+    page_id: str,
+    old_str: str,
+    new_str: str,
+    replace_all: bool = False,
+    allow_deleting_content: bool = False,
+    as_json: bool = False,
+) -> Dict[str, Any]:
+    """Surgical find-and-replace on page markdown content (update_content)."""
+    update: Dict[str, Any] = {"old_str": old_str, "new_str": new_str}
+    if replace_all:
+        update["replace_all_matches"] = True
+
+    body: Dict[str, Any] = {
+        "type": "update_content",
+        "update_content": {
+            "content_updates": [update],
+        },
+    }
+    if allow_deleting_content:
+        body["update_content"]["allow_deleting_content"] = True
+
+    result = client.request(
+        path=f"pages/{page_id}/markdown",
+        method="PATCH",
+        body=body,
+    )
+    if as_json:
+        print_json(result)
+    else:
+        print(f"Edited page markdown: {page_id}")
+    return result
+
+
+def page_edit_markdown_batch(
+    client: Client,
+    page_id: str,
+    updates_json: str,
+    allow_deleting_content: bool = False,
+    as_json: bool = False,
+) -> Dict[str, Any]:
+    """Batch find-and-replace on page markdown (up to 100 updates)."""
+    updates = json.loads(updates_json)
+    body: Dict[str, Any] = {
+        "type": "update_content",
+        "update_content": {
+            "content_updates": updates,
+        },
+    }
+    if allow_deleting_content:
+        body["update_content"]["allow_deleting_content"] = True
+
+    result = client.request(
+        path=f"pages/{page_id}/markdown",
+        method="PATCH",
+        body=body,
+    )
+    if as_json:
+        print_json(result)
+    else:
+        print(f"Batch edited page markdown: {page_id} ({len(updates)} updates)")
     return result
 
 

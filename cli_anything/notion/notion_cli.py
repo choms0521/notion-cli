@@ -137,11 +137,56 @@ def pages_markdown(ctx: click.Context, page_id: str) -> None:
 @pages_group.command("update-markdown")
 @click.argument("page_id")
 @click.argument("markdown")
+@click.option("--allow-deleting-content", is_flag=True, help="Allow deleting child pages/databases")
 @click.pass_context
-def pages_update_md(ctx: click.Context, page_id: str, markdown: str) -> None:
-    """Update page content with markdown."""
+def pages_update_md(
+    ctx: click.Context, page_id: str, markdown: str, allow_deleting_content: bool
+) -> None:
+    """Replace entire page content with markdown."""
     client = make_client(ctx.obj["token"])
-    pages.page_update_markdown(client, page_id, markdown, ctx.obj["json"])
+    pages.page_update_markdown(
+        client, page_id, markdown, allow_deleting_content, ctx.obj["json"]
+    )
+
+
+@pages_group.command("edit-markdown")
+@click.argument("page_id")
+@click.option("--old", "old_str", required=True, help="Text to find in page markdown")
+@click.option("--new", "new_str", required=True, help="Replacement text")
+@click.option("--replace-all", is_flag=True, help="Replace all matches (default: single match)")
+@click.option("--allow-deleting-content", is_flag=True, help="Allow deleting child pages/databases")
+@click.pass_context
+def pages_edit_md(
+    ctx: click.Context,
+    page_id: str,
+    old_str: str,
+    new_str: str,
+    replace_all: bool,
+    allow_deleting_content: bool,
+) -> None:
+    """Surgical find-and-replace on page markdown content."""
+    client = make_client(ctx.obj["token"])
+    pages.page_edit_markdown(
+        client, page_id, old_str, new_str, replace_all, allow_deleting_content, ctx.obj["json"]
+    )
+
+
+@pages_group.command("edit-markdown-batch")
+@click.argument("page_id")
+@click.argument("updates_json")
+@click.option("--allow-deleting-content", is_flag=True, help="Allow deleting child pages/databases")
+@click.pass_context
+def pages_edit_md_batch(
+    ctx: click.Context, page_id: str, updates_json: str, allow_deleting_content: bool
+) -> None:
+    """Batch find-and-replace on page markdown.
+
+    UPDATES_JSON: JSON array of {old_str, new_str, replace_all_matches?} objects (max 100).
+    """
+    client = make_client(ctx.obj["token"])
+    pages.page_edit_markdown_batch(
+        client, page_id, updates_json, allow_deleting_content, ctx.obj["json"]
+    )
 
 
 @pages_group.command("move")

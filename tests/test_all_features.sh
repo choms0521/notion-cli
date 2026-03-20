@@ -86,6 +86,18 @@ run_test "pages update-markdown" notion-cli pages update-markdown "$PAGE_ID" "# 
 # Pages - Markdown (verify update)
 run_test "pages markdown (after update)" notion-cli pages markdown "$PAGE_ID"
 
+# Pages - Edit-markdown (surgical find-and-replace)
+run_test "pages edit-markdown" notion-cli pages edit-markdown "$PAGE_ID" --old "테스트 제목" --new "수정된 제목"
+
+# Pages - Markdown (verify edit)
+run_test "pages markdown (after edit)" notion-cli pages markdown "$PAGE_ID"
+
+# Pages - Edit-markdown-batch (multiple replacements)
+run_test "pages edit-markdown-batch" notion-cli pages edit-markdown-batch "$PAGE_ID" '[{"old_str": "수정된 제목", "new_str": "최종 제목"}, {"old_str": "본문 내용입니다.", "new_str": "본문이 수정되었습니다."}]'
+
+# Pages - Markdown (verify batch edit)
+run_test "pages markdown (after batch edit)" notion-cli pages markdown "$PAGE_ID"
+
 # ── 4. Blocks ──
 echo "## 4. Blocks"
 
