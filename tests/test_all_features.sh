@@ -26,6 +26,46 @@ run_test() {
     echo "---"
 }
 
+# 명령 실행 후 출력에 expected 문자열이 포함되는지 검증
+assert_contains() {
+    local name="$1"
+    local expected="$2"
+    shift 2
+    local output
+    if output=$("$@" 2>&1); then
+        if echo "$output" | grep -qF "$expected"; then
+            green "$name"
+        else
+            red "$name" "Expected '$expected' not found in output: $output"
+        fi
+        echo "$output"
+    else
+        red "$name" "$output"
+        echo "$output"
+    fi
+    echo "---"
+}
+
+# JSON 출력에서 특정 jq 표현식이 truthy인지 검증
+assert_json() {
+    local name="$1"
+    local jq_expr="$2"
+    shift 2
+    local output
+    if output=$("$@" 2>&1); then
+        if echo "$output" | jq -e "$jq_expr" >/dev/null 2>&1; then
+            green "$name"
+        else
+            red "$name" "JSON assertion failed: $jq_expr"
+        fi
+        echo "$output"
+    else
+        red "$name" "$output"
+        echo "$output"
+    fi
+    echo "---"
+}
+
 echo "========================================"
 echo " notion-cli 전체 기능 통합 테스트"
 echo "========================================"
@@ -63,17 +103,17 @@ else
 fi
 echo "---"
 
-# Pages - Get
-run_test "pages get" notion-cli --json pages get "$PAGE_ID"
+# Pages - Get (verify returned page matches)
+assert_json "pages get" ".id == \"$PAGE_ID\"" notion-cli --json pages get "$PAGE_ID"
 
-# Pages - Update (title)
-run_test "pages update --title" notion-cli pages update "$PAGE_ID" --title "통합테스트 수정됨 (자동삭제)"
+# Pages - Update (title) - verify output confirms update
+assert_contains "pages update --title" "Updated page" notion-cli pages update "$PAGE_ID" --title "통합테스트 수정됨 (자동삭제)"
 
-# Pages - Update (icon)
-run_test "pages update --icon" notion-cli pages update "$PAGE_ID" --icon "🧪"
+# Pages - Update (icon) - verify title was actually changed
+assert_json "pages update --icon (verify title persisted)" ".properties.title.title[0].plain_text == \"통합테스트 수정됨 (자동삭제)\"" notion-cli --json pages update "$PAGE_ID" --icon "🧪"
 
-# Pages - Markdown (read)
-run_test "pages markdown" notion-cli pages markdown "$PAGE_ID"
+# Pages - Markdown (read) - verify initial content
+assert_contains "pages markdown" "초기 본문 텍스트" notion-cli pages markdown "$PAGE_ID"
 
 # Pages - Update-markdown
 run_test "pages update-markdown" notion-cli pages update-markdown "$PAGE_ID" "# 테스트 제목
@@ -83,20 +123,20 @@ run_test "pages update-markdown" notion-cli pages update-markdown "$PAGE_ID" "# 
 - 항목 1
 - 항목 2"
 
-# Pages - Markdown (verify update)
-run_test "pages markdown (after update)" notion-cli pages markdown "$PAGE_ID"
+# Pages - Markdown (verify update contains expected content)
+assert_contains "pages markdown (after update)" "테스트 제목" notion-cli pages markdown "$PAGE_ID"
 
 # Pages - Edit-markdown (surgical find-and-replace)
 run_test "pages edit-markdown" notion-cli pages edit-markdown "$PAGE_ID" --old "테스트 제목" --new "수정된 제목"
 
-# Pages - Markdown (verify edit)
-run_test "pages markdown (after edit)" notion-cli pages markdown "$PAGE_ID"
+# Pages - Markdown (verify edit applied correctly)
+assert_contains "pages markdown (after edit)" "수정된 제목" notion-cli pages markdown "$PAGE_ID"
 
 # Pages - Edit-markdown-batch (multiple replacements)
 run_test "pages edit-markdown-batch" notion-cli pages edit-markdown-batch "$PAGE_ID" '[{"old_str": "수정된 제목", "new_str": "최종 제목"}, {"old_str": "본문 내용입니다.", "new_str": "본문이 수정되었습니다."}]'
 
-# Pages - Markdown (verify batch edit)
-run_test "pages markdown (after batch edit)" notion-cli pages markdown "$PAGE_ID"
+# Pages - Markdown (verify both batch edits applied)
+assert_contains "pages markdown (after batch edit: title)" "최종 제목" notion-cli pages markdown "$PAGE_ID"
 
 # ── 4. Blocks ──
 echo "## 4. Blocks"
@@ -180,19 +220,19 @@ else
 fi
 echo "---"
 
-# Databases - Get
+# Databases - Get (verify ID matches)
 if [ -n "$DB_ID" ]; then
-    run_test "databases get" notion-cli --json databases get "$DB_ID"
+    assert_json "databases get" ".id == \"$DB_ID\"" notion-cli --json databases get "$DB_ID"
 fi
 
-# Databases - Update
+# Databases - Update (verify output confirms)
 if [ -n "$DB_ID" ]; then
-    run_test "databases update" notion-cli databases update "$DB_ID" --title "수정된 테스트 DB"
+    assert_contains "databases update" "Updated database" notion-cli databases update "$DB_ID" --title "수정된 테스트 DB"
 fi
 
-# Databases - Query
+# Databases - Query (verify returns array)
 if [ -n "$DB_ID" ]; then
-    run_test "databases query" notion-cli --json databases query "$DB_ID"
+    assert_json "databases query" "type == \"array\"" notion-cli --json databases query "$DB_ID"
 fi
 
 # ── 6. Comments ──
